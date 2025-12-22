@@ -131,6 +131,7 @@ class Game:
         pygame.display.set_caption("Roguelike")
         self.clock = pygame.time.Clock()
         self.running = True
+        self.camera_offset = pygame.math.Vector2(0, 0)
 
     def new(self):
         # Start a new game
@@ -142,8 +143,8 @@ class Game:
         # NEW: Create the player instance
         # Place player in the center of the first floor tile found
         player_start_pos = None
-        for y, row in enumerate(self.dungeon_map):
-            for x, tile in enumerate(row):
+        for x, column in enumerate(self.dungeon_map):
+            for y, tile in enumerate(column):
                 if tile == TILE_FLOOR and player_start_pos is None:
                     player_start_pos = (x, y)
                     break # Found the first floor tile, no need to keep looking
@@ -169,17 +170,21 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.playing = False
-                    self.running = False
 
             # Update
             self.player.update()
+
+            # --- THE SCROLLING CAMERA LOGIC ---
+            # Calculate the camera's desired position. We want the player in the center.
+            self.camera_offset.x = self.player.rect.centerx - SCREEN_WIDTH // 2
+            self.camera_offset.y = self.player.rect.centery - SCREEN_HEIGHT // 2
 
             # Draw
             self.screen.fill(BLACK)
             draw_map(self.screen, self.dungeon_map)
             
-            # NEW: Draw the player
-            self.player.draw(self.screen, (0, 0)) # Camera offset is (0,0) for now
+            # NEW: Draw the player using the camera offset
+            self.player.draw(self.screen, self.camera_offset)
             
             pygame.display.flip()
 
