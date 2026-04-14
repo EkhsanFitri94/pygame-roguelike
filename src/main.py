@@ -20,13 +20,14 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 DARK_GREEN = (0, 150, 0)
-PLAYER_COLOR = (255, 0, 255) # NEW: A distinct color for the player
+PLAYER_COLOR = (255, 0, 255)  # NEW: A distinct color for the player
 
 # Tiles
 TILE_WALL = 0
 TILE_FLOOR = 1
 
 # --- Classes ---
+
 
 # NEW: The Player Class
 class Player(pygame.sprite.Sprite):
@@ -39,6 +40,9 @@ class Player(pygame.sprite.Sprite):
         # Use a Vector2 for position for easier math
         self.pos = pygame.math.Vector2(x * TILESIZE, y * TILESIZE)
         self.vel = pygame.math.Vector2(0, 0)
+
+    def sync_rect(self):
+        self.rect.topleft = (self.pos.x, self.pos.y)
 
     def update(self):
         # Handle player input
@@ -55,58 +59,65 @@ class Player(pygame.sprite.Sprite):
 
         # Move the player based on velocity
         self.pos += self.vel
+        self.sync_rect()
 
     def draw(self, screen, camera_offset):
         # Draw the player relative to the camera
+        self.sync_rect()
         draw_rect = self.rect.copy()
-        draw_rect.topleft = (self.pos.x - camera_offset[0], self.pos.y - camera_offset[1])
+        draw_rect.topleft = (
+            self.pos.x - camera_offset[0],
+            self.pos.y - camera_offset[1],
+        )
         screen.blit(self.image, draw_rect)
+
 
 # --- Functions ---
 def generate_dungeon():
     """Generates a dungeon using a random walk algorithm."""
     print("--- generate_dungeon function has been called ---")
-    
+
     # Start with a map full of walls
     dungeon_map = [[TILE_WALL for _ in range(MAP_HEIGHT)] for _ in range(MAP_WIDTH)]
-    
+
     # Random walk settings
     total_tiles = MAP_WIDTH * MAP_HEIGHT
     target_floor_tiles = total_tiles // 2  # Aim for 50% floor tiles
     current_floor_tiles = 0
-    
+
     # Starting position for walk
     walker_x = random.randrange(1, MAP_WIDTH - 1)
     walker_y = random.randrange(1, MAP_HEIGHT - 1)
     dungeon_map[walker_x][walker_y] = TILE_FLOOR
     current_floor_tiles += 1
-    
+
     # The random walk
     directions = [(0, -1), (1, 0), (0, 1), (-1, 0)]  # N, E, S, W
     while current_floor_tiles < target_floor_tiles:
         # Pick a random direction
         dx, dy = random.choice(directions)
-        
+
         # Calculate new position for walker
         new_walker_x = walker_x + dx
         new_walker_y = walker_y + dy
-        
+
         # --- Robust Boundary Check ---
         # Check if the new position is within valid map boundaries.
         is_x_valid = 1 <= new_walker_x <= MAP_WIDTH - 2
         is_y_valid = 1 <= new_walker_y <= MAP_HEIGHT - 2
-        
+
         if is_x_valid and is_y_valid:
             # The walker's position is valid. Update the walker's position.
             walker_x, walker_y = new_walker_x, new_walker_y
-            
+
             # Now, access the map using the VALIDATED coordinates.
             # This will always work, regardless of variable names.
             if dungeon_map[walker_x][walker_y] == TILE_WALL:
                 dungeon_map[walker_x][walker_y] = TILE_FLOOR
                 current_floor_tiles += 1
-                
+
     return dungeon_map
+
 
 def draw_map(screen, dungeon_map):
     """Draws the dungeon map to the screen."""
@@ -118,9 +129,10 @@ def draw_map(screen, dungeon_map):
                 color = GREEN
             else:
                 color = BLACK  # Should not happen
-            
+
             rect = pygame.Rect(x * TILESIZE, y * TILESIZE, TILESIZE, TILESIZE)
             pygame.draw.rect(screen, color, rect)
+
 
 # --- Game Class (to hold everything) ---
 class Game:
@@ -136,10 +148,10 @@ class Game:
     def new(self):
         # Start a new game
         self.all_sprites = pygame.sprite.Group()
-        
+
         # Generate the dungeon
         self.dungeon_map = generate_dungeon()
-        
+
         # NEW: Create the player instance
         # Place player in the center of the first floor tile found
         player_start_pos = None
@@ -147,16 +159,16 @@ class Game:
             for y, tile in enumerate(column):
                 if tile == TILE_FLOOR and player_start_pos is None:
                     player_start_pos = (x, y)
-                    break # Found the first floor tile, no need to keep looking
+                    break  # Found the first floor tile, no need to keep looking
             if player_start_pos is not None:
                 break
-        
+
         if player_start_pos:
             self.player = Player(self, player_start_pos[0], player_start_pos[1])
         else:
             # Fallback: place player at 10, 10 if no floor is found (shouldn't happen)
             self.player = Player(self, 10, 10)
-            
+
         self.all_sprites.add(self.player)
         self.run()
 
@@ -182,11 +194,12 @@ class Game:
             # Draw
             self.screen.fill(BLACK)
             draw_map(self.screen, self.dungeon_map)
-            
+
             # NEW: Draw the player using the camera offset
             self.player.draw(self.screen, self.camera_offset)
-            
+
             pygame.display.flip()
+
 
 # --- Main Game Loop ---
 g = Game()
